@@ -1,12 +1,16 @@
-import { DataQuery, DataSourceJsonData } from '@grafana/data';
+import { DataQuery, DataSourceJsonData, SelectableValue } from '@grafana/data';
 
 export interface MyQuery extends DataQuery {
-  queryText?: string;
-  constant: number;
+  sensor: SelectableValue<string>;
+  aggrPoints: number;
+  aggrFunc: SelectableValue<string>;
+  metaTags: Array<SelectableValue<string>>;
 }
 
 export const defaultQuery: Partial<MyQuery> = {
-  constant: 6.5,
+  sensor: {},
+  aggrPoints: 10000,
+  aggrFunc: { label: 'none', value: 'none' },
 };
 
 /**
