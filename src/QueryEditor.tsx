@@ -38,6 +38,8 @@ export class QueryEditor extends PureComponent<Props, State> {
         { label: 'min', value: 'min' },
       ],
     };
+    console.log("props", props)
+    
   }
 
   onTagsChange = (mt: Array<SelectableValue<string>>) => {
@@ -133,7 +135,7 @@ export class QueryEditor extends PureComponent<Props, State> {
     //     imgUrl: 'https://placekitten.com/40/40',
     //   },
     // ];
-
+    // console.log("this QueryEditor", this)
     return (
       <div className="gf-form">
         <Select options={this.state.sensors} value={this.state.sensor} onChange={this.onSensorChange} />

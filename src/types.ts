@@ -5,6 +5,9 @@ export interface MyQuery extends DataQuery {
   aggrPoints: number;
   aggrFunc: SelectableValue<string>;
   metaTags: Array<SelectableValue<string>>;
+  annsensor?: string;
+  annkey?: string;
+  annfilter?: string;
 }
 
 export const defaultQuery: Partial<MyQuery> = {

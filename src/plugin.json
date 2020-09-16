@@ -3,6 +3,7 @@
   "name": "peregreen-grafana",
   "id": "peregreen-grafana",
   "metrics": true,
+  "annotations": true,
   "info": {
     "description": "",
     "author": {
