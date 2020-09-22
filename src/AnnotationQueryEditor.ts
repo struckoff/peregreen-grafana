@@ -1,4 +1,4 @@
-import { MyQuery } from 'types';
+// import { MyQuery } from 'types';
 
 export class AnnotationQueryEditor {
   static templateUrl = 'partials/annotations.editor.html';

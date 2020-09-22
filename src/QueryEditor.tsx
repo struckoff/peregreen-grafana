@@ -38,8 +38,7 @@ export class QueryEditor extends PureComponent<Props, State> {
         { label: 'min', value: 'min' },
       ],
     };
-    console.log("props", props)
-    
+    console.log('props', props);
   }
 
   onTagsChange = (mt: Array<SelectableValue<string>>) => {

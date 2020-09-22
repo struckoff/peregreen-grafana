@@ -1,4 +1,5 @@
 import defaults from 'lodash/defaults';
+import msgpack from 'msgpack-lite';
 
 import {
   DataQueryRequest,
@@ -7,8 +8,8 @@ import {
   DataSourceInstanceSettings,
   MutableDataFrame,
   FieldType,
-  AnnotationQueryRequest,
-  AnnotationEvent,
+  // AnnotationQueryRequest,
+  // AnnotationEvent,
 } from '@grafana/data';
 import { getBackendSrv } from '@grafana/runtime';
 
@@ -20,13 +21,13 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
 
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
     super(instanceSettings);
-    console.log("instanceSettings", instanceSettings)
+    console.log('instanceSettings', instanceSettings);
     this.url = String(instanceSettings.url);
   }
 
   async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
-    console.log("optionss", options)
-    console.log("this", this)
+    console.log('optionss', options);
+    console.log('this', this);
     const { range } = options;
     const from = range!.from.valueOf();
     const to = range!.to.valueOf();
@@ -38,14 +39,20 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         fields: [
           { name: 'Time', values: [from, to], type: FieldType.time },
           { name: 'Value', type: FieldType.number },
-          { name: 'Tag', type: FieldType.other },
         ],
+      });
+
+      this.extractDataMSGP(query, from, to)
+      .then(response => response.arrayBuffer())
+      .then(data => {
+        let res = msgpack.decode(new Uint8Array(data))
+        console.log(res);
       });
 
       if (query.aggrFunc.value === 'none') {
         return this.extractData(query, from, to).then(response => {
           response.data.forEach((point: any) => {
-            frame.appendRow([point.Timestamp, point.Value, query.sensor.label]);
+            frame.appendRow([point.Timestamp, point.Value]);
           });
           return frame;
         });
@@ -53,7 +60,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       return this.extractData(query, from, to).then(response => {
         response.data.forEach((point: any) => {
           if (point.Values.length > 0) {
-            frame.appendRow([point.Start, point.Values[0], query.sensor.label]);
+            frame.appendRow([point.Start, point.Values[0]]);
           }
         });
         return frame;
@@ -107,56 +114,82 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     });
   }
 
-  async annotationQuery(options: AnnotationQueryRequest<MyQuery>): Promise<AnnotationEvent[]> {
-    console.log('annotationQuery', options);
+  async extractDataMSGP(params: MyQuery, from: number, to: number) {
+    var link =
+      this.url +
+      '/extract/' +
+      params.sensor.value +
+      '/' +
+      from +
+      '-' +
+      to +
+      '/' +
+      params.aggrPoints +
+      'ms/' +
+      params.aggrFunc.value +
+      '/msgp';
+    // var datapoints
 
-    const { range } = options;
-    const from = range!.from.valueOf();
-    const to = range!.to.valueOf();
-    let valfilter:Array<string> = []
+    console.log(link)
 
-    const events: AnnotationEvent[] = [];
-    
-    if (!options.annotation.annsensor || !options.annotation.annkey){
-      return events
-    }
-
-    const link = this.url + "/meta/" + options.annotation.annsensor + "/" + options.annotation.annkey
-
-    if (options.annotation.annfilter){
-      valfilter = options.annotation.annfilter.split(",")
-      valfilter = valfilter.map(s => {return s.trim()})
-    }
-    console.log(valfilter.indexOf("k6v1asds"), valfilter, options.annotation.annfilter)
-
-
-    return await getBackendSrv().datasourceRequest({
-      url: link,
-      method: 'GET',
-    }).then(response => {
-      if (response.data === undefined || response.data == null) {
-        return events;
-      }
-      Object.entries(response.data).forEach((entrie: Array<number>) => {
-        if (valfilter.length <= 0 || valfilter.indexOf(entrie[0]) >= 0){
-          entrie[1].forEach(rng => {
-            rng = rngCalc([from, to], rng)
-            if (rng.length > 0){
-             let event: AnnotationEvent = {
-               time: rng[0],
-               timeEnd: rng[1],
-               isRegion: true,
-               text: entrie[0],
-               tags: [String(options.annotation.annsensor), String(options.annotation.annkey)],
-             };
-             events.push(event)
-            }
-          })
-        }
-      });
-      return events;
-    });
+    return await fetch(link)
+    // .datasourceRequest({
+      // url: link,
+      // method: 'GET',
+    // });
   }
+
+  // async annotationQuery(options: AnnotationQueryRequest<MyQuery>): Promise<AnnotationEvent[]> {
+  //   console.log('annotationQuery', options);
+
+  //   const { range } = options;
+  //   const from = range!.from.valueOf();
+  //   const to = range!.to.valueOf();
+  //   let valfilter: string[] = [];
+
+  //   const events: AnnotationEvent[] = [];
+
+  //   if (!options.annotation.annsensor || !options.annotation.annkey) {
+  //     return events;
+  //   }
+
+  //   const link = this.url + '/meta/' + options.annotation.annsensor + '/' + options.annotation.annkey;
+
+  //   if (options.annotation.annfilter) {
+  //     valfilter = options.annotation.annfilter.split(',');
+  //     valfilter = valfilter.map(s => {
+  //       return s.trim();
+  //     });
+  //   }
+  //   return await getBackendSrv()
+  //     .datasourceRequest({
+  //       url: link,
+  //       method: 'GET',
+  //     })
+  //     .then(response => {
+  //       if (response.data === undefined || response.data == null) {
+  //         return events;
+  //       }
+  //       Object.entries(response.data).forEach((entrie: number?[]) => {
+  //         if (valfilter.length <= 0 || valfilter.indexOf(entrie[0]) >= 0) {
+  //           entrie[1].forEach(rng => {
+  //             rng = rngCalc([from, to], rng);
+  //             if (rng.length > 0) {
+  //               let event: AnnotationEvent = {
+  //                 time: rng[0],
+  //                 timeEnd: rng[1],
+  //                 isRegion: true,
+  //                 text: entrie[0],
+  //                 tags: [String(options.annotation.annsensor), String(options.annotation.annkey)],
+  //               };
+  //               events.push(event);
+  //             }
+  //           });
+  //         }
+  //       });
+  //       return events;
+  //     });
+  // }
 
   async testDatasource() {
     // Implement a health check for your data source.
@@ -167,22 +200,30 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   }
 }
 
-function rngCalc(glrng:Array<number>, rng:Array<number>){
-  let left = rng[0]
-  let right = rng[1]
+// function rngCalc(glrng: number[], rng: number[]) {
+//   let left = rng[0];
+//   let right = rng[1];
 
-  if (rng[1] < glrng[0]){
-    return []
-  }
-  if (rng[0] > glrng[1]){
-    return []
-  }
-  if (rng[0] < glrng[0]){
-   left =  glrng[0]
-  }
-  if (rng[1] > glrng[1]){
-    right = glrng[1]
-   }
-   return [left, right]
+//   if (rng[1] < glrng[0]) {
+//     return [];
+//   }
+//   if (rng[0] > glrng[1]) {
+//     return [];
+//   }
+//   if (rng[0] < glrng[0]) {
+//     left = glrng[0];
+//   }
+//   if (rng[1] > glrng[1]) {
+//     right = glrng[1];
+//   }
+//   return [left, right];
+// }
 
+function str2ab(str: string) {
+  var buf = new ArrayBuffer(str.length);
+  var bufView = new Uint8Array(buf);
+  for (var i = 0, strLen = str.length; i < strLen; i++) {
+    bufView[i] = str.charCodeAt(i);
+  }
+  return bufView;
 }

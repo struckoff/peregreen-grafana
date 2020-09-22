@@ -15,9 +15,12 @@
     "@grafana/runtime": "7.0.1",
     "@grafana/toolkit": "7.0.1",
     "@grafana/ui": "7.0.1",
+    "@msgpack/msgpack": "latest",
     "@testing-library/jest-dom": "5.4.0",
     "@testing-library/react": "^10.0.2",
-    "@types/lodash": "^4.14.161"
+    "@types/lodash": "^4.14.161",
+    "@types/msgpack-lite": "^0.1.7",
+    "msgpack-lite": "latest"
   },
   "engines": {
     "node": ">=12"
